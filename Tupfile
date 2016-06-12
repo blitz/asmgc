@@ -1,0 +1,4 @@
+: foreach *.asm |> nasm -f elf64 %f -o %o |> %B.o {objs}
+: {objs}        |> ld %f -o %o            |> asmgc
+
+.gitignore
