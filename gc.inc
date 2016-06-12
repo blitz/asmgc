@@ -48,18 +48,22 @@
 %define FRAME_HEADER_SIZE (FRAME_LINK+8)
 
 ;; Allocate the given amount of bytes (parameter 1) and return a pointer in GPR_PTR0. The memory is marked with the given type (parameter 2).
+;; Input:
+;; Macro parameter 1 = register (needs to be one of GPR_PTR*)
+;; Macro parameter 2 = size
+;; Macro parameter 3 = type
 ;; Output:
 ;; GPR_PTR0 = pointer to allocated space
 ;; LINK clobbered
-%macro allocate 2
+%macro allocate 3
   %%again:
-  lea GPR_PTR0, [ALLOC + %1]
+  lea %1, [ALLOC + %2]
   lea LINK, [%%again]
-  cmp GPR_PTR0, ALLOC_END
+  cmp %1, ALLOC_END
   jae garbage_collect
-  xchg GPR_PTR0, ALLOC
-  mov dword [GPR_PTR0 + OBJ_SIZE], %1
-  mov dword [GPR_PTR0 + OBJ_TYPE], %2
+  xchg %1, ALLOC
+  mov dword [%1 + OBJ_SIZE], %2
+  mov dword [%1 + OBJ_TYPE], %3
   %%enough_space:
 %endmacro
 
@@ -69,13 +73,13 @@
 ;; FP   the frame pointer to store in the function frame
 ;; Output:
 ;; FP   the new function frame
-;; Clobbers GPR_PTR0, GPR_INT5, GPR_INT6
+;; Clobbers GPR_PTR3, GPR_INT5
 %macro prologue 1
   mov GPR_INT5, LINK
-  allocate (FRAME_HEADER_SIZE + %1), OBJ_TYPE_FRAME
-  mov [GPR_PTR0 + FRAME_LAST_FRAME], FP
-  mov [GPR_PTR0 + FRAME_LINK], GPR_INT5
-  mov FP, GPR_PTR0
+  allocate GPR_PTR3, (FRAME_HEADER_SIZE + %1), OBJ_TYPE_FRAME
+  mov [GPR_PTR3 + FRAME_LAST_FRAME], FP
+  mov [GPR_PTR3 + FRAME_LINK], GPR_INT5
+  mov FP, GPR_PTR3
 %endmacro
 
 %macro call_gc 1
