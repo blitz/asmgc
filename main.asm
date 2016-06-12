@@ -7,6 +7,7 @@ BITS 64
 %include "gc.inc"
 
 GLOBAL _start
+EXTERN garbage_collect
 
 SECTION .rodata
 
@@ -14,9 +15,6 @@ SECTION .rodata
 
 SECTION .text
 
-garbage_collect:
-  ; Nothing here yet.
-  ; FALLTHROUGH
 die:
   ud2a
 
