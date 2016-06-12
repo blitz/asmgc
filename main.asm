@@ -61,11 +61,38 @@ exit:
   ud2a
 
 
+;; Write string to STDOUT.
+;; Input:
+;; GPR_INT0 (rax) = pointer to buffer
+;; GPR_INT1 (rdx) = length of buffer
+;; Clobbers:
+;; GPR_INT2, GPR_INT6, GPR_PTR2
+write:
+  mov GPR_INT6, LINK
+
+  mov rdi, FILENO_STDOUT
+  mov rsi, GPR_INT0
+  ; mov rdx, GPR_INT1 (pointless)
+  mov eax, SYSCALL_WRITE
+  syscall
+
+  jmp GPR_INT6
+
+
 main:
   prologue 0
 
-  ; Nothing to do yet
+  lea GPR_INT0, [.hello]
+  mov GPR_INT1, 6
+  call_gc write
+
+  lea GPR_INT0, [.world]
+  mov GPR_INT1, 6
+  call_gc write
 
   ret_gc
+
+.hello: db "hello", 10
+.world: db "world", 10
 
 ;; EOF

@@ -31,7 +31,6 @@
 %define GPR_PTR2  r11
 %define GPR_PTR3  r12
 
-
 ;; Layout of heap object
 STRUC OBJ
 .SIZE: resw 1                   ; <64 KB objects for now
@@ -53,7 +52,7 @@ ENDSTRUC
 ;; Macro parameter 2 = size
 ;; Macro parameter 3 = type
 ;; Output:
-;; GPR_PTR0 = pointer to allocated space
+;; pointer to allocated space in requested register
 ;; LINK clobbered
 %macro allocate 3
   %%again:

@@ -18,4 +18,6 @@
 %assign PROT_READ     0x1
 %assign PROT_WRITE    0x2
 
+%assign FILENO_STDOUT 1
+
 ;; EOF
