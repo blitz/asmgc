@@ -1,5 +1,5 @@
-: foreach *.asm |> nasm -g -f elf64 %f -o %o         |> %B.o {objs}
-: foreach *.cpp |> g++ -std=c++14 -g -Os -c %f -o %o |> %B.o {objs}
+: foreach *.asm |> nasm -g -f elf64 %f -o %o                              |> %B.o {objs}
+: foreach *.cpp |> g++ -fno-strict-aliasing -std=c++14 -g -Os -c %f -o %o |> %B.o {objs}
 
 : {objs}        |> ld -g %f -o %o            |> asmgc
 
