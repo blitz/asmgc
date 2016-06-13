@@ -35,6 +35,7 @@
 STRUC OBJ
 .SIZE: resw 1                   ; <64 KB objects for now
 .TYPE: resw 1
+       resd 1                   ; padding
 ENDSTRUC
 
 ;; The different object types
@@ -57,12 +58,11 @@ ENDSTRUC
 %macro allocate 3
   %%again:
   lea %1, [ALLOC + %2]
-  lea LINK, [%%again]
   cmp %1, ALLOC_END
+  lea LINK, [%%again]
   jae garbage_collect
+  mov dword [ALLOC + OBJ.SIZE], %2 | (%3 << 16)
   xchg %1, ALLOC
-  mov dword [%1 + OBJ.SIZE], %2 | (%3 << 16)
-  %%enough_space:
 %endmacro
 
 ;; Generate a function prologue with the given bytes (parameter 1) of additional memory in the function frame.
@@ -74,7 +74,7 @@ ENDSTRUC
 ;; Clobbers GPR_PTR3, GPR_INT5
 %macro prologue 1
   mov GPR_INT5, LINK
-  allocate GPR_PTR3, (FRAME_size + %1), OBJ_TYPE_FRAME
+  allocate GPR_PTR3, (OBJ_size + FRAME_size + %1), OBJ_TYPE_FRAME
   mov [GPR_PTR3 + FRAME.LAST_FRAME], FP
   mov [GPR_PTR3 + FRAME.LINK], GPR_INT5
   mov FP, GPR_PTR3

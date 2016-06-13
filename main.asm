@@ -11,7 +11,8 @@ EXTERN garbage_collect
 
 SECTION .rodata
 
-;; Nothing here yet
+hello_str: db "hello", 10
+world_str: db "world", 10
 
 SECTION .text
 
@@ -68,7 +69,7 @@ exit:
 ;; Clobbers:
 ;; GPR_INT2, GPR_INT6, GPR_PTR2
 write:
-  mov GPR_INT6, LINK
+  prologue 0
 
   mov rdi, FILENO_STDOUT
   mov rsi, GPR_INT0
@@ -76,23 +77,20 @@ write:
   mov eax, SYSCALL_WRITE
   syscall
 
-  jmp GPR_INT6
+  ret_gc
 
 
 main:
   prologue 0
 
-  lea GPR_INT0, [.hello]
+  lea GPR_INT0, [hello_str]
   mov GPR_INT1, 6
   call_gc write
 
-  lea GPR_INT0, [.world]
+  lea GPR_INT0, [world_str]
   mov GPR_INT1, 6
   call_gc write
 
   ret_gc
-
-.hello: db "hello", 10
-.world: db "world", 10
 
 ;; EOF
