@@ -7,12 +7,19 @@ BITS 64
 %include "gc.inc"
 
 GLOBAL _start
+GLOBAL _c_stack
+
 EXTERN garbage_collect
 
 SECTION .rodata
 
 hello_str: db "hello", 10
 world_str: db "world", 10
+
+SECTION .bss
+
+;; Contains a pointer to the original C stack
+_c_stack:  resq 1
 
 SECTION .text
 
@@ -38,6 +45,9 @@ mmap:
   ret
 
 _start:
+
+  ; We need a real stack later when we want to call into C. Let's use the initial stack.
+  mov [_c_stack], rsp
 
   ; Allocate heap
   mov rdi, FROM_SPACE
