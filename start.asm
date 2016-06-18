@@ -52,13 +52,17 @@ _start:
   mov rdi, TO_SPACE
   call mmap
 
-  ; We keep our current allocation pointer in RSP.
-  mov rsp, FROM_SPACE
+  ; Initialize the allocator
+  mov ALLOC,     FROM_SPACE
+  mov ALLOC_END, FROM_SPACE + HEAP_SIZE
 
-  ; The end of our allocation area is in RBP.
-  mov rbp, TO_SPACE
+  ; Clear garbage in pointer registers to avoid confusing the GC
+  xor GPR_PTR0, GPR_PTR0
+  xor GPR_PTR1, GPR_PTR1
+  xor GPR_PTR2, GPR_PTR2
+  xor GPR_PTR3, GPR_PTR3
 
-  mov FP, 0
+  xor FP, FP
   call_gc main
 
 exit:

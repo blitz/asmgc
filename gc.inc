@@ -60,7 +60,10 @@ ENDSTRUC
   lea %1, [ALLOC + %2]
   cmp %1, ALLOC_END
   lea LINK, [%%again]
-  jae garbage_collect
+  jb %%nogc
+  xor %1, %1                    ; clear invalid pointer
+  jmp garbage_collect
+%%nogc:
   mov dword [ALLOC + OBJ.SIZE], %2 | (%3 << 16)
   xchg %1, ALLOC
 %endmacro

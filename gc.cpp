@@ -90,5 +90,5 @@ void *c_collect(void *root_array, size_t roots, void *from, void *to, size_t hea
     update_ptr(root_ptrs[i], alloc_start, alloc_start + heap_size);
   }
 
-  return to;
+  return alloc_start;
 }

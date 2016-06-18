@@ -44,7 +44,7 @@ garbage_collect:
   mov rdx, FROM_SPACE
   cmp ALLOC, rdx
   mov rcx, TO_SPACE
-  jne .skip
+  je .skip
   xchg rdx, rcx
 .skip:
 
