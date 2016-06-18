@@ -11,10 +11,6 @@ EXTERN garbage_collect
 
 SECTION .rodata
 
-hello_str: db "hello", 10
-world_str: db "world", 10
-
-
 SECTION .text
 
 ;; Write string to STDOUT.
@@ -32,19 +28,41 @@ write:
   mov eax, SYSCALL_WRITE
   syscall
 
+  xor GPR_PTR2, GPR_PTR2        ; destroyed by syscall
+
   ret_gc
 
+
+;; Compute the fibonacci sequence in the braindead recursive way to have a
+;; benchmark for function call performance.
+;; Input:
+;; GPR_INT0 the index of the fibonacci number to calucate
+;; Output:
+;; GPR_INT0 the fibonacci number
+fibonacci:
+  cmp GPR_INT0, 1
+  ja .non_trivial
+  jmp LINK
+.non_trivial:
+
+  prologue 8
+
+  mov [FP + FRAME.LOCAL_VAR + 0], GPR_INT0
+  dec GPR_INT0
+  call_gc fibonacci
+  mov GPR_INT1, GPR_INT0        ; result
+  mov GPR_INT0, [FP + FRAME.LOCAL_VAR + 0]
+  mov [FP + FRAME.LOCAL_VAR + 0], GPR_INT1
+  sub GPR_INT0, 2
+  call_gc fibonacci
+  add GPR_INT0, [FP + FRAME.LOCAL_VAR + 0]
+  ret_gc
 
 main:
   prologue 0
 
-  lea GPR_INT0, [hello_str]
-  mov GPR_INT1, 6
-  call_gc write
-
-  lea GPR_INT0, [world_str]
-  mov GPR_INT1, 6
-  call_gc write
+  mov GPR_INT0, 45
+  call_gc fibonacci
 
   ret_gc
 

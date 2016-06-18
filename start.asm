@@ -66,8 +66,8 @@ _start:
   call_gc main
 
 exit:
+  mov rdi, GPR_INT0
   mov eax, SYSCALL_EXIT
-  mov edi, 0
   syscall
   ud2a
 

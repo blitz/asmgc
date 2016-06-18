@@ -45,6 +45,7 @@ ENDSTRUC
 STRUC FRAME, OBJ_size
 .LAST_FRAME: resq 1
 .LINK:       resq 1
+.LOCAL_VAR:
 ENDSTRUC
 
 ;; Allocate the given amount of bytes (parameter 1) and return a pointer in GPR_PTR0. The memory is marked with the given type (parameter 2).
