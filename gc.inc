@@ -40,6 +40,7 @@ ENDSTRUC
 
 ;; The different object types
 %define OBJ_TYPE_FRAME   0
+%define OBJ_TYPE_CONS    1
 
 ;; Layout of function frame
 STRUC FRAME, OBJ_size

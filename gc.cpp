@@ -8,7 +8,8 @@ namespace {
 
   enum class obj_type : uint16_t {
     FRAME = 0,
-    FORWARD = 1,
+    CONS  = 1,
+    FORWARD = 0xFFFF,
   };
 
   struct obj {
@@ -21,6 +22,12 @@ namespace {
   {
     obj      *last_frame;
     uintptr_t link;
+  };
+
+  struct cons : public obj
+  {
+    obj      *first;
+    obj      *rest;
   };
 
   struct forward : public obj
@@ -71,6 +78,10 @@ namespace {
     switch (to_obj->type) {
     case obj_type::FRAME:
       update_ptr(static_cast<frame *>(to_obj)->last_frame, alloc_start, alloc_end);
+      break;
+    case obj_type::CONS:
+      update_ptr(static_cast<cons *>(to_obj)->first, alloc_start, alloc_end);
+      update_ptr(static_cast<cons *>(to_obj)->rest,  alloc_start, alloc_end);
       break;
     default:
       __builtin_trap();

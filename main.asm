@@ -32,6 +32,18 @@ write:
 
   ret_gc
 
+;; Create a cons object
+;; Input:
+;; GPR_PTR0 the 'first' part of the cons
+;; GPR_PTR1 the 'rest' part of the cons
+;; Output:
+;; GPR_PTR0 a pointer to the cons object
+cons:
+  allocate GPR_PTR3, CONS, 0
+  mov [GPR_PTR3 + CONS.FIRST], GPR_PTR0
+  mov [GPR_PTR3 + CONS.REST],  GPR_PTR1
+  mov GPR_PTR0, GPR_PTR3
+  jmp LINK
 
 ;; Compute the fibonacci sequence in the braindead recursive way to have a
 ;; benchmark for function call performance.
