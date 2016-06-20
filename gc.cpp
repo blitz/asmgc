@@ -22,6 +22,16 @@ namespace {
   {
     obj      *last_frame;
     uintptr_t link;
+
+    size_t local_vars() const {
+      return (size - sizeof(frame)) / 8;
+    }
+  };
+
+  struct frame_with_local_vars : public frame
+  {
+    uintptr_t  pointer_bitmap;
+    obj       *local_var[];
   };
 
   struct cons : public obj
@@ -76,9 +86,20 @@ namespace {
 
     // Recursively copy all referenced objects.
     switch (to_obj->type) {
-    case obj_type::FRAME:
-      update_ptr(static_cast<frame *>(to_obj)->last_frame, alloc_start, alloc_end);
+    case obj_type::FRAME: {
+      auto   *a_frame    = static_cast<frame *>(to_obj);
+      size_t  local_vars = a_frame->local_vars();
+      update_ptr(a_frame->last_frame, alloc_start, alloc_end);
+
+      for (size_t i = 0; i < local_vars; i++) {
+        auto *a_frame_vars = static_cast<frame_with_local_vars *>(a_frame);
+        if (a_frame_vars->pointer_bitmap & (1ULL << i)) {
+          update_ptr(a_frame_vars->local_var[i], alloc_start, alloc_end);
+        }
+      }
+
       break;
+    }
     case obj_type::CONS:
       update_ptr(static_cast<cons *>(to_obj)->first, alloc_start, alloc_end);
       update_ptr(static_cast<cons *>(to_obj)->rest,  alloc_start, alloc_end);

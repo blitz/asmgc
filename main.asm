@@ -20,7 +20,7 @@ SECTION .text
 ;; Clobbers:
 ;; GPR_INT2, GPR_INT6, GPR_PTR2
 write:
-  prologue 0
+  prologue 0, 0
 
   mov rdi, FILENO_STDOUT
   mov rsi, GPR_INT0
@@ -57,23 +57,21 @@ fibonacci:
   jmp LINK
 .non_trivial:
 
-  prologue 8
+  prologue 1, 0
 
-  mov [FP + FRAME.LOCAL_VAR + 0], GPR_INT0
+  mov LOCAL_VAR(0), GPR_INT0
   dec GPR_INT0
   call_gc fibonacci
-  mov GPR_INT1, GPR_INT0        ; result
-  mov GPR_INT0, [FP + FRAME.LOCAL_VAR + 0]
-  mov [FP + FRAME.LOCAL_VAR + 0], GPR_INT1
+  xchg LOCAL_VAR(0), GPR_INT0
   sub GPR_INT0, 2
   call_gc fibonacci
-  add GPR_INT0, [FP + FRAME.LOCAL_VAR + 0]
+  add GPR_INT0, LOCAL_VAR(0)
   ret_gc
 
 main:
-  prologue 0
+  prologue 0, 0
 
-  mov GPR_INT0, 45
+  mov GPR_INT0, 40
   call_gc fibonacci
 
   ret_gc

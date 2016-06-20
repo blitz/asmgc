@@ -76,20 +76,34 @@ ENDSTRUC
   xchg %1, ALLOC
 %endmacro
 
-;; Generate a function prologue with the given bytes (parameter 1) of additional memory in the function frame.
+;; Generate a function prologue with the given bytes of additional memory in the function frame.
 ;; Input:
 ;; LINK the link pointer to store in the function frame
 ;; FP   the frame pointer to store in the function frame
+;; Macro parameters:
+;; 1 - additional QWORDS of storage
+;; 2 - pointer bitmap (a 1 for every local variable that is a pointer)
 ;; Output:
 ;; FP   the new function frame
 ;; Clobbers GPR_PTR3, GPR_INT5
-%macro prologue 1
-  mov GPR_INT5, LINK
-  allocate GPR_PTR3, FRAME, %1
-  mov [GPR_PTR3 + FRAME.LAST_FRAME], FP
-  mov [GPR_PTR3 + FRAME.LINK], GPR_INT5
-  mov FP, GPR_PTR3
+%macro prologue 2
+  mov  GPR_INT5, LINK
+  xchg GPR_PTR3, FP
+%if %1
+  allocate FP, FRAME, (1 + %1) * 8
+%else
+  allocate FP, FRAME, 0
+%endif
+  mov [FP + FRAME.LAST_FRAME], GPR_PTR3
+  mov [FP + FRAME.LINK], GPR_INT5
+%if %1
+  mov qword [FP + FRAME.LOCAL_VAR], %2
+%endif
+
 %endmacro
+
+;; Return a memory expression for the given local variable (starting with 0)
+%define LOCAL_VAR(n) [FP + FRAME.LOCAL_VAR + 8*(n + 1)]
 
 %macro call_gc 1
   lea LINK, [%%return]
