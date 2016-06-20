@@ -102,7 +102,7 @@ cons:
 ;; Compute the fibonacci sequence in the braindead recursive way to have a
 ;; benchmark for function call performance.
 ;; Input:
-;; GPR_INT0 the index of the fibonacci number to calucate
+;; GPR_INT0 the index of the fibonacci number to calcucate
 ;; Output:
 ;; GPR_INT0 the fibonacci number
 fibonacci:
