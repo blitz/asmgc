@@ -15,22 +15,76 @@ SECTION .text
 
 ;; Write string to STDOUT.
 ;; Input:
-;; GPR_INT0 (rax) = pointer to buffer
-;; GPR_INT1 (rdx) = length of buffer
+;; GPR_PTR0 a string to print
 ;; Clobbers:
 ;; GPR_INT2, GPR_INT6, GPR_PTR2
 write:
   prologue 0, 0
 
-  mov rdi, FILENO_STDOUT
-  mov rsi, GPR_INT0
-  ; mov rdx, GPR_INT1 (pointless)
-  mov eax, SYSCALL_WRITE
+  mov   rdi, FILENO_STDOUT
+  lea   rsi, [GPR_PTR0 + STRING.DATA]
+  movzx rdx, word [GPR_PTR0 + OBJ.SIZE]
+  sub   rdx, STRING.DATA
+  mov   eax, SYSCALL_WRITE
   syscall
 
   xor GPR_PTR2, GPR_PTR2        ; destroyed by syscall
 
   ret_gc
+
+
+;; Reverse a string in place
+;; Input:
+;; GPR_PTR0 the string to reverse
+;; Output:
+;; GPR_PTR0 the same string
+reverse_string:
+
+  mov   GPR_INT0, STRING.DATA
+  movzx GPR_INT1, word [GPR_PTR0 + OBJ.SIZE]
+
+.loop:
+  dec GPR_INT1
+  cmp GPR_INT0, GPR_INT1
+  jae .ret
+
+  mov GPR_INT2b, [GPR_PTR0 + GPR_INT0]
+  mov GPR_INT3b, [GPR_PTR0 + GPR_INT1]
+  mov [GPR_PTR0 + GPR_INT0], GPR_INT3b
+  mov [GPR_PTR0 + GPR_INT1], GPR_INT2b
+
+  inc GPR_INT0
+  jmp .loop
+
+.ret:
+  jmp LINK
+
+;; Convert an integer to a string
+;; Input:
+;; GPR_INT0 the integer to convert
+;; Output:
+;; GPR_PTR0 the string object
+int_to_string:
+  mov GPR_INT1, LINK
+  allocate GPR_PTR0, STRING, 20
+  mov LINK, GPR_INT1
+
+  mov GPR_INT2, 0               ; index into string
+  mov GPR_INT3, 10              ; base
+.next_digit:
+  xor GPR_INT1, GPR_INT1
+  div GPR_INT3
+  lea GPR_INT1, [GPR_INT1 + '0']
+  mov [GPR_PTR0 + STRING.DATA + GPR_INT2], GPR_INT1b
+  lea GPR_INT2, [GPR_INT2 + 1]
+  test GPR_INT0, GPR_INT0
+  jnz .next_digit
+
+  mov GPR_INT0, 20
+  sub GPR_INT0, GPR_INT2
+
+  sub word [GPR_PTR0 + OBJ.SIZE], GPR_INT0w
+  jmp reverse_string
 
 ;; Create a cons object
 ;; Input:
@@ -73,6 +127,8 @@ main:
 
   mov GPR_INT0, 40
   call_gc fibonacci
+  call_gc int_to_string
+  call_gc write
 
   ret_gc
 

@@ -122,10 +122,15 @@ ENDSTRUC
 %%return:
 %endmacro
 
-;; Returns from a function.
-%macro ret_gc 0
+;; Deallocates a function frame
+%macro epilogue 0
   mov LINK, [FP + FRAME.LINK]
   mov FP,   [FP + FRAME.LAST_FRAME]
+%endmacro
+
+;; Returns from a function with a frame
+%macro ret_gc 0
+  epilogue
   jmp LINK
 %endmacro
 
