@@ -7,8 +7,9 @@ extern "C" void *c_collect(void *root_array, size_t roots,
 namespace {
 
   enum class obj_type : uint16_t {
-    FRAME = 0,
-    CONS  = 1,
+    FRAME   = 0,
+    CONS    = 1,
+    STRING  = 2,
     FORWARD = 0xFFFF,
   };
 
@@ -103,6 +104,9 @@ namespace {
     case obj_type::CONS:
       update_ptr(static_cast<cons *>(to_obj)->first, alloc_start, alloc_end);
       update_ptr(static_cast<cons *>(to_obj)->rest,  alloc_start, alloc_end);
+      break;
+    case obj_type::STRING:
+      // Nothing to do.
       break;
     default:
       __builtin_trap();

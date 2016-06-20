@@ -7,13 +7,18 @@
 
 ;; We use our registers like this:
 ;; RAX, RDX, RCX, RBX and R13-R15 = general purpose non-pointer values
-%define GPR_INT0 rax
-%define GPR_INT1 rdx
-%define GPR_INT2 rcx
-%define GPR_INT3 rbx
-%define GPR_INT4 r13
-%define GPR_INT5 r14
-%define GPR_INT6 r15
+%define GPR_INT0  rax
+%define GPR_INT0b al
+%define GPR_INT0w ax
+%define GPR_INT1  rdx
+%define GPR_INT1b dl
+%define GPR_INT2  rcx
+%define GPR_INT2b cl
+%define GPR_INT3  rbx
+%define GPR_INT3b bl
+%define GPR_INT4  r13
+%define GPR_INT5  r14
+%define GPR_INT6  r15
 
 ;; RBP = frame pointer register
 %define FP       rbp
@@ -41,6 +46,7 @@ ENDSTRUC
 ;; The different object types
 %define OBJ_TYPE_FRAME   0
 %define OBJ_TYPE_CONS    1
+%define OBJ_TYPE_STRING  2
 
 ;; Layout of function frame
 STRUC FRAME, OBJ_size
@@ -53,6 +59,11 @@ ENDSTRUC
 STRUC CONS, OBJ_size
 .FIRST:      resq 1
 .REST:       resq 1
+ENDSTRUC
+
+;; A non-null terminated string
+STRUC STRING, OBJ_size
+.DATA:
 ENDSTRUC
 
 ;; Allocate the given amount of bytes (parameter 1) and return a pointer in GPR_PTR0. The memory is marked with the given type (parameter 2).
