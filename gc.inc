@@ -5,8 +5,9 @@
 %assign FROM_SPACE    1<<30
 %assign TO_SPACE      FROM_SPACE + 2*HEAP_SIZE
 
-;; We use our registers like this:
-;; RAX, RDX, RCX, RBX and R13-R15 = general purpose non-pointer values
+;; We use our registers like this: RAX, RDX, RCX, RBX and R13-R15 = general
+;; purpose non-pointer values, these values are not tagged and are ignored by
+;; the GC. Do not store pointers here!
 %define GPR_INT0  rax
 %define GPR_INT0b al
 %define GPR_INT0w ax
@@ -20,17 +21,17 @@
 %define GPR_INT5  r14
 %define GPR_INT6  r15
 
-;; RBP = frame pointer register
+;; RBP = frame pointer register, contains a tagged pointer to a frame object
 %define FP       rbp
 
-;; RDI = link register
+;; RDI = link register, contains an untagged pointer to code
 %define LINK     rdi
 
 ;; RSP = allocation area
 %define ALLOC     rsp
 %define ALLOC_END r8
 
-;; R9 to r12 are for pointer values
+;; R9 to r12 are for tagged values.
 %define GPR_PTR0  r9
 %define GPR_PTR1  r10
 %define GPR_PTR2  r11
@@ -66,6 +67,26 @@ STRUC STRING, OBJ_size
 .DATA:
 ENDSTRUC
 
+;; We mark all pointers by setting the lowest bit.
+%define PTR_TAG 1
+
+;; Turns a tagged value into a pointer by stripping its tag bit.
+%define DEREF(v) (v - PTR_TAG)
+
+;; Turns an untagged integer constant into a tagged one.
+%define TAGGED_INT(v) (v * 2)
+
+;; Move an integer into a pointer register by tagging it.
+%macro MOV_INT_TO_PTR 2
+  lea %1, [TAGGED_INT(%2)]
+%endmacro
+
+;; Move a tagged integer from a pointer into an integer register.
+%macro MOV_PTR_TO_INT 2
+  mov %1, %2
+  shr %1, 1
+%endmacro
+
 ;; Allocate the given amount of bytes (parameter 1) and return a pointer in GPR_PTR0. The memory is marked with the given type (parameter 2).
 ;; Input:
 ;; Macro parameter 1 = register (needs to be one of GPR_PTR*)
@@ -85,6 +106,7 @@ ENDSTRUC
 %%nogc:
   mov dword [ALLOC + OBJ.SIZE], (OBJ_size + %2_size + %3) | (OBJ_TYPE_%2 << 16)
   xchg %1, ALLOC
+  or %1, PTR_TAG
 %endmacro
 
 ;; Generate a function prologue with the given bytes of additional memory in the function frame.
@@ -93,11 +115,10 @@ ENDSTRUC
 ;; FP   the frame pointer to store in the function frame
 ;; Macro parameters:
 ;; 1 - additional QWORDS of storage
-;; 2 - pointer bitmap (a 1 for every local variable that is a pointer)
 ;; Output:
 ;; FP   the new function frame
 ;; Clobbers GPR_PTR3, GPR_INT5
-%macro prologue 2
+%macro prologue 1
   mov  GPR_INT5, LINK
   xchg GPR_PTR3, FP
 %if %1
@@ -105,16 +126,12 @@ ENDSTRUC
 %else
   allocate FP, FRAME, 0
 %endif
-  mov [FP + FRAME.LAST_FRAME], GPR_PTR3
-  mov [FP + FRAME.LINK], GPR_INT5
-%if %1
-  mov qword [FP + FRAME.LOCAL_VAR], %2
-%endif
-
+  mov [DEREF(FP) + FRAME.LAST_FRAME], GPR_PTR3
+  mov [DEREF(FP) + FRAME.LINK], GPR_INT5
 %endmacro
 
 ;; Return a memory expression for the given local variable (starting with 0)
-%define LOCAL_VAR(n) [FP + FRAME.LOCAL_VAR + 8*(n + 1)]
+%define LOCAL_VAR(n) [DEREF(FP) + FRAME.LOCAL_VAR + 8*(n + 1)]
 
 %macro call_gc 1
   lea LINK, [%%return]
@@ -124,8 +141,8 @@ ENDSTRUC
 
 ;; Deallocates a function frame
 %macro epilogue 0
-  mov LINK, [FP + FRAME.LINK]
-  mov FP,   [FP + FRAME.LAST_FRAME]
+  mov LINK, [DEREF(FP) + FRAME.LINK]
+  mov FP,   [DEREF(FP) + FRAME.LAST_FRAME]
 %endmacro
 
 ;; Returns from a function with a frame

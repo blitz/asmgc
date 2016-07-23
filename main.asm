@@ -19,11 +19,11 @@ SECTION .text
 ;; Clobbers:
 ;; GPR_INT2, GPR_INT6, GPR_PTR2
 write:
-  prologue 0, 0
+  prologue 0
 
   mov   rdi, FILENO_STDOUT
-  lea   rsi, [GPR_PTR0 + STRING.DATA]
-  movzx rdx, word [GPR_PTR0 + OBJ.SIZE]
+  lea   rsi, [DEREF(GPR_PTR0) + STRING.DATA]
+  movzx rdx, word [DEREF(GPR_PTR0) + OBJ.SIZE]
   sub   rdx, STRING.DATA
   mov   eax, SYSCALL_WRITE
   syscall
@@ -41,17 +41,17 @@ write:
 reverse_string:
 
   mov   GPR_INT0, STRING.DATA
-  movzx GPR_INT1, word [GPR_PTR0 + OBJ.SIZE]
+  movzx GPR_INT1, word [DEREF(GPR_PTR0) + OBJ.SIZE]
 
 .loop:
   dec GPR_INT1
   cmp GPR_INT0, GPR_INT1
   jae .ret
 
-  mov GPR_INT2b, [GPR_PTR0 + GPR_INT0]
-  mov GPR_INT3b, [GPR_PTR0 + GPR_INT1]
-  mov [GPR_PTR0 + GPR_INT0], GPR_INT3b
-  mov [GPR_PTR0 + GPR_INT1], GPR_INT2b
+  mov GPR_INT2b, [DEREF(GPR_PTR0) + GPR_INT0]
+  mov GPR_INT3b, [DEREF(GPR_PTR0) + GPR_INT1]
+  mov [DEREF(GPR_PTR0) + GPR_INT0], GPR_INT3b
+  mov [DEREF(GPR_PTR0) + GPR_INT1], GPR_INT2b
 
   inc GPR_INT0
   jmp .loop
@@ -75,7 +75,7 @@ int_to_string:
   xor GPR_INT1, GPR_INT1
   div GPR_INT3
   lea GPR_INT1, [GPR_INT1 + '0']
-  mov [GPR_PTR0 + STRING.DATA + GPR_INT2], GPR_INT1b
+  mov [DEREF(GPR_PTR0) + STRING.DATA + GPR_INT2], GPR_INT1b
   lea GPR_INT2, [GPR_INT2 + 1]
   test GPR_INT0, GPR_INT0
   jnz .next_digit
@@ -83,7 +83,7 @@ int_to_string:
   mov GPR_INT0, 20
   sub GPR_INT0, GPR_INT2
 
-  sub word [GPR_PTR0 + OBJ.SIZE], GPR_INT0w
+  sub word [DEREF(GPR_PTR0) + OBJ.SIZE], GPR_INT0w
   jmp reverse_string
 
 ;; Create a cons object
@@ -94,8 +94,8 @@ int_to_string:
 ;; GPR_PTR0 a pointer to the cons object
 cons:
   allocate GPR_PTR3, CONS, 0
-  mov [GPR_PTR3 + CONS.FIRST], GPR_PTR0
-  mov [GPR_PTR3 + CONS.REST],  GPR_PTR1
+  mov [DEREF(GPR_PTR3) + CONS.FIRST], GPR_PTR0
+  mov [DEREF(GPR_PTR3) + CONS.REST],  GPR_PTR1
   mov GPR_PTR0, GPR_PTR3
   jmp LINK
 
@@ -111,19 +111,33 @@ fibonacci:
   jmp LINK
 .non_trivial:
 
-  prologue 1, 0
+  prologue 1
 
-  mov LOCAL_VAR(0), GPR_INT0
+  ; This is a bit convoluted, because we can only store tagged values on the
+  ; stack.
+
+  ; XXX Make this function use GPR_PTR0 as parameter. This saves all the
+  ; conversions between tagged and untagged.
+
+  MOV_INT_TO_PTR GPR_PTR0, GPR_INT0
+  mov LOCAL_VAR(0), GPR_PTR0
   dec GPR_INT0
   call_gc fibonacci
-  xchg LOCAL_VAR(0), GPR_INT0
+
+  MOV_INT_TO_PTR GPR_PTR0, GPR_INT0
+  xchg LOCAL_VAR(0), GPR_PTR0
+
+  MOV_PTR_TO_INT GPR_INT0, GPR_PTR0
   sub GPR_INT0, 2
   call_gc fibonacci
-  add GPR_INT0, LOCAL_VAR(0)
+  mov GPR_PTR0, LOCAL_VAR(0)
+  MOV_PTR_TO_INT GPR_INT1, GPR_PTR0
+
+  add GPR_INT0, GPR_INT1
   ret_gc
 
 main:
-  prologue 0, 0
+  prologue 0
 
   mov GPR_INT0, 40
   call_gc fibonacci

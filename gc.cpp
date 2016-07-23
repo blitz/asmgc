@@ -19,31 +19,42 @@ namespace {
     uint32_t padding;
   };
 
+  /// Pointers are marked by having the lowest bit set.
+  struct obj_ptr {
+    uintptr_t value;
+
+    obj_ptr(obj *p) : value(reinterpret_cast<uintptr_t>(p) | 1) {}
+
+    bool is_pointer() const { return value & 1; }
+
+    obj       *operator->()       { return reinterpret_cast<obj       *>(value - 1); }
+    obj const *operator->() const { return reinterpret_cast<obj const *>(value - 1); }
+
+    template <typename T>
+    T *as() { return static_cast<T *>(this->operator->()); }
+  };
+
+  /// A function stack frame.
   struct frame : public obj
   {
-    obj      *last_frame;
+    obj_ptr   last_frame;
     uintptr_t link;
+    obj_ptr   local_var[];
 
     size_t local_vars() const {
       return (size - sizeof(frame)) / 8;
     }
   };
 
-  struct frame_with_local_vars : public frame
-  {
-    uintptr_t  pointer_bitmap;
-    obj       *local_var[];
-  };
-
   struct cons : public obj
   {
-    obj      *first;
-    obj      *rest;
+    obj_ptr first;
+    obj_ptr rest;
   };
 
   struct forward : public obj
   {
-    obj      *ptr;
+    obj_ptr ptr;
   };
 
   void copy(obj *to, obj const *from)
@@ -55,16 +66,19 @@ namespace {
   }
 
   /// Copies a single object into to-space or follows its forwarding pointer.
-  void update_ptr(obj *&ptr, char *&alloc_start, char *alloc_end)
+  void update_ptr(obj_ptr &ptr, char *&alloc_start, char *alloc_end)
   {
-    if (ptr == 0) {
-      return;
-    }
+    if (not ptr.is_pointer()) { return; }
 
     // TODO Check whether ptr is valid and points into from space
 
+    // Sanity
+    if (ptr.value < (1U << 20) or ptr->size < sizeof(obj)) {
+      __builtin_trap();
+    }
+
     if (ptr->type == obj_type::FORWARD) {
-      ptr = static_cast<forward *>(ptr)->ptr;
+      ptr = ptr.as<forward>()->ptr;
       return;
     }
 
@@ -76,11 +90,11 @@ namespace {
       __builtin_trap();
     }
 
-    copy(to_obj, ptr);
+    copy(to_obj, ptr.as<obj>());
 
     // Replace old object to forwarding pointer to this object
     ptr->type = obj_type::FORWARD;
-    static_cast<forward *>(ptr)->ptr = to_obj;
+    ptr.as<forward>()->ptr = to_obj;
 
     // Replace old pointer to point to new object
     ptr = to_obj;
@@ -93,10 +107,7 @@ namespace {
       update_ptr(a_frame->last_frame, alloc_start, alloc_end);
 
       for (size_t i = 0; i < local_vars; i++) {
-        auto *a_frame_vars = static_cast<frame_with_local_vars *>(a_frame);
-        if (a_frame_vars->pointer_bitmap & (1ULL << i)) {
-          update_ptr(a_frame_vars->local_var[i], alloc_start, alloc_end);
-        }
+        update_ptr(a_frame->local_var[i], alloc_start, alloc_end);
       }
 
       break;
@@ -119,7 +130,7 @@ namespace {
 
 void *c_collect(void *root_array, size_t roots, void *from, void *to, size_t heap_size)
 {
-  auto *root_ptrs   = static_cast<obj **>(root_array);
+  auto *root_ptrs   = static_cast<obj_ptr *>(root_array);
   auto *alloc_start = static_cast<char *>(to);
 
   for (size_t i = 0; i < roots; i++) {
